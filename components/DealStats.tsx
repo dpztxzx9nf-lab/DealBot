@@ -1,16 +1,16 @@
 "use client";
 
 import { useDeals } from "@/hooks/useDeals";
+
 export function DealStats() {
   const { hydrated, statusCounts } = useDeals();
-
   const loading = !hydrated;
 
   const stats = [
-    { label: "Queue", value: loading ? "…" : String(statusCounts.pending) },
-    { label: "Saved", value: loading ? "…" : String(statusCounts.saved) },
-    { label: "Skipped", value: loading ? "…" : String(statusCounts.skipped) },
-    { label: "Sold", value: loading ? "…" : String(statusCounts.sold) },
+    { label: "Queue", value: loading ? "..." : String(statusCounts.pending) },
+    { label: "Pipeline", value: loading ? "..." : String(statusCounts.saved) },
+    { label: "Skipped", value: loading ? "..." : String(statusCounts.skipped) },
+    { label: "Sold", value: loading ? "..." : String(statusCounts.sold) },
   ];
 
   return (

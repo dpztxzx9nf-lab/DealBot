@@ -46,7 +46,7 @@ export function FeedStatusPanel() {
         label="Pending (swipe)"
         value={hydrated ? String(statusCounts.pending) : "…"}
       />
-      <Row label="Saved" value={hydrated ? String(statusCounts.saved) : "…"} />
+      <Row label="Pipeline" value={hydrated ? String(statusCounts.saved) : "…"} />
       <Row label="Skipped" value={hydrated ? String(statusCounts.skipped) : "…"} />
       <Row label="Sold" value={hydrated ? String(statusCounts.sold) : "…"} />
       <Row

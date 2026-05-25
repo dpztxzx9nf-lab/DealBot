@@ -1,7 +1,7 @@
-import { enrichDeal } from "../scoring";
+import { enrichDeal, isSwipeEligibleDeal } from "../scoring";
 import type { Deal, DealInput, RawFeedItem } from "../types";
 import { detectBrandTags } from "./brands";
-import { filterFeedItems, type FilteredLead } from "./filter";
+import { filterFeedItems, type FeedFilterTier, type FilteredLead } from "./filter";
 import { estimateResaleHeuristic } from "./estimate";
 import { extractStore, inferDealAndRetail } from "./parse-prices";
 
@@ -33,9 +33,11 @@ export function rawToDealInput(
       strongBrand: brandTags.strongBrand,
       compact: brandTags.compact,
       bulky: brandTags.bulky,
+      fragile: /\b(glass|ceramic|mirror|fragile|screen only)\b/i.test(text),
       oversaturated: brandTags.oversaturated,
       localPickupFriendly: true,
-      niche: /\b(refurb|open box| ymmv)\b/i.test(text),
+      niche: /\b(refurb|open box| ymmv|collector|limited edition)\b/i.test(text),
+      hardToPrice: /\b(lot|bundle|assorted|misc|parts|unknown)\b/i.test(text),
     },
   };
 }
@@ -58,7 +60,8 @@ export function buildDealFromLead(
 /** DEBUG: bypass filter — convert every raw RSS/Reddit item to a swipe card. */
 export function buildDealsFromRawBypass(
   raw: RawFeedItem[],
-  zip: string
+  zip: string,
+  options: { onlyEligible?: boolean } = {}
 ): Deal[] {
   const seen = new Set<string>();
   const deals: Deal[] = [];
@@ -82,7 +85,8 @@ export function buildDealsFromRawBypass(
       store: item.store ?? extractStore(`${item.title} ${item.description ?? ""}`),
     };
 
-    deals.push(buildDealFromLead(lead, zip));
+    const deal = buildDealFromLead(lead, zip);
+    if (!options.onlyEligible || isSwipeEligibleDeal(deal)) deals.push(deal);
   }
 
   return deals.sort((a, b) => b.score - a.score);
@@ -90,9 +94,10 @@ export function buildDealsFromRawBypass(
 
 export function filterAndBuildDeals(
   raw: RawFeedItem[],
-  zip: string
+  zip: string,
+  tier: FeedFilterTier = "strict"
 ): Deal[] {
-  const filtered = filterFeedItems(raw);
+  const filtered = filterFeedItems(raw, tier);
   return filtered
     .map((lead) => buildDealFromLead(lead, zip))
     .sort((a, b) => b.score - a.score);

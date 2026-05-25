@@ -2,13 +2,22 @@
 
 import Image from "next/image";
 import type { Deal } from "@/lib/types";
-import { formatMoney, formatRoi } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 interface ImmersiveDealCardProps {
   deal: Deal;
   stackIndex?: number;
   style?: React.CSSProperties;
   className?: string;
+}
+
+function recommendationLabel(deal: Deal): string {
+  if (deal.recommendation === "SKIP") return "Skip";
+  if (deal.recommendation === "WATCH") return "Watch";
+  if (deal.sourceQuality === "strong" || deal.sellThroughScore >= 78) {
+    return "Buy";
+  }
+  return "Buy";
 }
 
 export function ImmersiveDealCard({
@@ -18,8 +27,7 @@ export function ImmersiveDealCard({
   className = "",
 }: ImmersiveDealCardProps) {
   const sourceLabel = deal.feedLabel ?? deal.source;
-  const isHot =
-    deal.recommendation === "BUY" && deal.confidence === "HIGH";
+  const isHot = deal.recommendation === "BUY" && deal.confidence === "HIGH";
 
   return (
     <article
@@ -40,12 +48,11 @@ export function ImmersiveDealCard({
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 text-6xl opacity-40">
-            📦
+            Box
           </div>
         )}
       </div>
 
-      {/* Top gradient + badges (clear of outer chrome) */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-3 pt-1">
         <span className="max-w-[45%] truncate rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
@@ -61,18 +68,17 @@ export function ImmersiveDealCard({
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
               deal.recommendation === "BUY"
                 ? "bg-emerald-400 text-zinc-950"
-                : deal.recommendation === "MAYBE"
+                : deal.recommendation === "WATCH"
                   ? "bg-amber-400 text-zinc-950"
                   : "bg-zinc-600/90 text-white"
             }`}
           >
-            {formatRoi(deal.roiMultiple)}
+            {recommendationLabel(deal)}
           </span>
         </div>
       </div>
 
-      {/* Bottom gradient + copy */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black via-black/90 to-black/20" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-black via-black/90 to-black/20" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
 
       <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-6 pt-14">
@@ -92,7 +98,7 @@ export function ImmersiveDealCard({
               {formatMoney(deal.clearancePrice)}
             </p>
           </div>
-          <div className="pb-0.5 text-lg text-white/30">→</div>
+          <div className="pb-0.5 text-lg text-white/30">to</div>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-widest text-white/45">
               Sold comp
@@ -106,16 +112,20 @@ export function ImmersiveDealCard({
               Net
             </p>
             <p className="text-2xl font-black tabular-nums text-emerald-400">
-              +{formatMoney(deal.estimatedProfit)}
+              +{formatMoney(deal.netProfit)}
             </p>
           </div>
         </div>
 
         <p className="mt-3 text-xs font-medium text-white/50">
-          {deal.confidence} confidence · {deal.recommendation}
+          {deal.sellThroughConfidence} sell-through - {deal.inventoryStatus} stock -{" "}
+          {deal.roiPercent}% ROI
           {deal.strongCandidate && (
-            <span className="ml-2 text-cyan-300">· Hot pick</span>
+            <span className="ml-2 text-cyan-300">Hot pick</span>
           )}
+        </p>
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/65">
+          {deal.qualityExplanation}
         </p>
       </div>
     </article>

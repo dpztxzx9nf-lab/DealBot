@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { PipelineDealList } from "@/components/PipelineDealList";
 
-export default function SavedPage() {
+export default function PipelinePage() {
   return (
     <AppShell title="Pipeline">
       <PipelineDealList />

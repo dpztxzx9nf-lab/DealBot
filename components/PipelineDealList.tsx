@@ -4,25 +4,25 @@ import { useDeals } from "@/hooks/useDeals";
 import { formatMoney } from "@/lib/money";
 import { DealCard } from "./DealCard";
 
-export function SavedDealList() {
-  const { savedDeals, setStatus, deleteDeal, hydrated } = useDeals();
+export function PipelineDealList() {
+  const { pipelineDeals, setStatus, deleteDeal, hydrated } = useDeals();
 
   if (!hydrated) {
     return <p className="p-4 text-zinc-500">Loading...</p>;
   }
 
-  if (savedDeals.length === 0) {
+  if (pipelineDeals.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center text-zinc-500">
-        <p className="text-4xl">Star</p>
-        <p>No saved flips yet. Swipe right on promising resale leads.</p>
+        <p className="text-4xl">P</p>
+        <p>No pipeline leads yet. Move serious or watchlisted opportunities here from Swipe.</p>
       </div>
     );
   }
 
   return (
     <ul className="flex flex-col gap-4 overflow-y-auto px-4 py-2">
-      {savedDeals.map((deal) => (
+      {pipelineDeals.map((deal) => (
         <li key={deal.id} className="space-y-2">
           <DealCard deal={deal} compact />
           <div className="flex flex-wrap gap-2">
@@ -53,6 +53,15 @@ export function SavedDealList() {
             >
               Mark sold
             </button>
+            {deal.status !== "bought" && (
+              <button
+                type="button"
+                onClick={() => setStatus(deal.id, "bought", { strongCandidate: true })}
+                className="rounded-lg bg-cyan-500/20 px-3 py-1.5 text-xs font-medium text-cyan-300"
+              >
+                Make active
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setStatus(deal.id, "pending")}
@@ -70,12 +79,12 @@ export function SavedDealList() {
               Delete
             </button>
           </div>
-          {deal.strongCandidate && (
-            <p className="text-xs text-cyan-400">Strong BUY - verify locally</p>
-          )}
+          <p className="text-xs text-cyan-400">
+            {deal.status === "bought" ? "Active sourcing target" : "Watchlisted opportunity"}
+          </p>
           <p className="text-xs text-zinc-600">
-            Net profit {formatMoney(deal.estimatedProfit)} -{" "}
-            {deal.recommendation} - {deal.sourceQuality} source
+            Net {formatMoney(deal.netProfit)} - {deal.roiPercent}% ROI -{" "}
+            {deal.recommendation} - {deal.inventoryStatus} stock
           </p>
         </li>
       ))}

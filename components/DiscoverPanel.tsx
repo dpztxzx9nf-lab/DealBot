@@ -5,6 +5,27 @@ import { useDeals } from "@/hooks/useDeals";
 import { isValidZip } from "@/lib/location";
 import { FREE_SOURCE_SLOTS, qualityLabel } from "@/lib/sources";
 
+const modes = [
+  {
+    id: "nearby",
+    label: "Nearby",
+    description: "Local pickup, retail clearance, and same-day acquisition.",
+    sources: ["Walmart", "Target", "Costco", "Home Depot", "Lowe's", "Facebook Marketplace", "Craigslist", "OfferUp"],
+  },
+  {
+    id: "online",
+    label: "Online",
+    description: "Shippable arbitrage from national online sources.",
+    sources: ["Amazon", "eBay", "Best Buy", "Slickdeals", "Reddit communities"],
+  },
+  {
+    id: "hybrid",
+    label: "Hybrid",
+    description: "Best profit path regardless of acquisition channel.",
+    sources: ["Local clearance", "Marketplaces", "Online-only flips", "Sold comps"],
+  },
+] as const;
+
 export function DiscoverPanel() {
   const {
     location,
@@ -12,13 +33,17 @@ export function DiscoverPanel() {
     loadFeed,
     feedLoading,
     feedError,
+    feedStatus,
     lastFeedMeta,
     addDeal,
     pendingDeals,
+    sourceMode,
+    setSourceMode,
   } = useDeals();
 
   const [zip, setZip] = useState(location.zip);
   const [radius, setRadius] = useState(String(location.radiusMiles));
+  const mode = sourceMode;
   const [searchTerm, setSearchTerm] = useState("");
   const [pasteUrl, setPasteUrl] = useState("");
   const [pasteTitle, setPasteTitle] = useState("");
@@ -65,12 +90,40 @@ export function DiscoverPanel() {
     <div className="flex flex-col gap-5 overflow-y-auto px-4 pb-8">
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4">
         <h2 className="text-sm font-semibold text-zinc-200">
-          Find underpriced items you can resell locally.
+          Find profitable resale leads.
         </h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Use your ZIP and a simple search term to check local listings, sold
-          comps, and clearance sources before you buy.
+          Pick a sourcing mode, set your ZIP, and build a queue from leads with
+          a realistic path to net profit.
         </p>
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-zinc-950/70 p-1">
+          {modes.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setSourceMode(item.id)}
+              className={`rounded-lg px-2 py-2 text-xs font-semibold ${
+                mode === item.id
+                  ? "bg-emerald-500 text-zinc-950"
+                  : "text-zinc-400"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+          {modes
+            .filter((item) => item.id === mode)
+            .map((item) => (
+              <div key={item.id}>
+                <p className="text-xs text-zinc-300">{item.description}</p>
+                <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
+                  {item.sources.join(" - ")}
+                </p>
+              </div>
+            ))}
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="block space-y-1">
             <span className="text-xs text-zinc-500">ZIP code</span>
@@ -109,7 +162,7 @@ export function DiscoverPanel() {
           onClick={saveAndFetch}
           className="mt-4 w-full rounded-xl bg-emerald-500 py-3.5 font-bold text-zinc-950 disabled:opacity-40"
         >
-          {feedLoading ? "Finding resale leads..." : "Build resale queue"}
+          {feedLoading ? "Finding resale leads..." : "Build intelligence queue"}
         </button>
         {feedError && (
           <p className="mt-2 text-xs text-amber-400/90">{feedError}</p>
@@ -124,11 +177,78 @@ export function DiscoverPanel() {
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
         <h2 className="text-sm font-semibold text-zinc-200">
-          Source checklist
+          Scan diagnostics
+        </h2>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-xl bg-zinc-950/60 p-3">
+            <p className="text-zinc-600">Active sources</p>
+            <p className="mt-1 text-lg font-bold text-zinc-100">
+              {feedStatus.activeSources}
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/60 p-3">
+            <p className="text-zinc-600">Inactive/planned</p>
+            <p className="mt-1 text-lg font-bold text-zinc-100">
+              {feedStatus.inactiveSources}
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/60 p-3">
+            <p className="text-zinc-600">Listings fetched</p>
+            <p className="mt-1 text-lg font-bold text-zinc-100">
+              {feedStatus.rawDealsFound}
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/60 p-3">
+            <p className="text-zinc-600">Accepted leads</p>
+            <p className="mt-1 text-lg font-bold text-emerald-400">
+              {feedStatus.acceptedProfitableLeads}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 rounded-xl bg-zinc-950/50 p-3 text-xs text-zinc-500">
+          <div className="flex justify-between gap-2">
+            <span>Rejected</span>
+            <span className="text-zinc-200">{feedStatus.rejectedCount}</span>
+          </div>
+          <div className="mt-1 flex justify-between gap-2">
+            <span>Last successful scan</span>
+            <span className="text-zinc-200">
+              {feedStatus.lastSuccessfulScanTime
+                ? new Date(feedStatus.lastSuccessfulScanTime).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })
+                : "None yet"}
+            </span>
+          </div>
+        </div>
+        {feedStatus.topRejectionReasons.length > 0 && (
+          <div className="mt-3 text-xs">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+              Top rejection reasons
+            </p>
+            <div className="mt-1 space-y-1">
+              {feedStatus.topRejectionReasons.map((item) => (
+                <div
+                  key={item.reason}
+                  className="flex justify-between gap-3 rounded-lg bg-zinc-950/50 px-2 py-1 text-zinc-400"
+                >
+                  <span className="truncate">{item.reason}</span>
+                  <span className="text-zinc-200">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+        <h2 className="text-sm font-semibold text-zinc-200">
+          Source intelligence
         </h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Strong means sold comps. Decent means active comps. Risky means verify
-          hard before driving.
+          Active sources scan automatically. Manual and connector slots stay
+          visible so DealBot does not pretend unsupported sources were scanned.
         </p>
         <div className="mt-3 grid gap-2">
           {FREE_SOURCE_SLOTS.map((source) => {
@@ -225,7 +345,7 @@ export function DiscoverPanel() {
       </section>
 
       <p className="text-center text-xs text-zinc-600">
-        {pendingDeals.length} listings in resale queue
+        {pendingDeals.length} profitable leads in swipe
       </p>
     </div>
   );

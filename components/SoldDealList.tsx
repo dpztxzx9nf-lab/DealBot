@@ -14,7 +14,7 @@ export function SoldDealList() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center text-zinc-500">
         <p className="text-4xl">✓</p>
-        <p>No sold history yet. Mark deals sold from Saved.</p>
+        <p>No sold history yet. Mark completed flips sold from Pipeline.</p>
       </div>
     );
   }

@@ -6,7 +6,7 @@ import { formatMoney, formatRoi } from "@/lib/money";
 
 const recStyles: Record<Deal["recommendation"], string> = {
   BUY: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
-  MAYBE: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+  WATCH: "bg-amber-500/20 text-amber-400 border-amber-500/40",
   SKIP: "bg-zinc-500/20 text-zinc-400 border-zinc-600/40",
 };
 
@@ -29,6 +29,15 @@ const speedStyles: Record<Deal["sellSpeed"], string> = {
   MEDIUM: "text-amber-400",
   SLOW: "text-red-400",
 };
+
+function recommendationLabel(deal: Deal): string {
+  if (deal.recommendation === "SKIP") return "Skip";
+  if (deal.recommendation === "WATCH") return "Watch";
+  if (deal.sourceQuality === "strong" || deal.sellThroughScore >= 78) {
+    return "Buy";
+  }
+  return "Buy";
+}
 
 interface DealCardProps {
   deal: Deal;
@@ -67,7 +76,7 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
           <span
             className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${recStyles[deal.recommendation]}`}
           >
-            {deal.recommendation}
+            {recommendationLabel(deal)}
           </span>
           {deal.discountPercent != null && deal.discountPercent >= 40 && (
             <span className="rounded-full bg-red-500/30 px-2.5 py-0.5 text-xs font-bold text-red-300">
@@ -114,10 +123,42 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
           <div className="rounded-lg bg-zinc-800/80 p-2">
             <p className="text-[10px] uppercase text-zinc-500">Net profit</p>
             <p className="font-semibold text-zinc-50">
-              {formatMoney(deal.estimatedProfit)}
+              {formatMoney(deal.netProfit)}
             </p>
           </div>
         </div>
+
+        {!compact && (
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-zinc-950/70 p-2">
+              <p className="text-[10px] uppercase text-zinc-500">ROI</p>
+              <p className="font-semibold text-zinc-100">{deal.roiPercent}%</p>
+            </div>
+            <div className="rounded-lg bg-zinc-950/70 p-2">
+              <p className="text-[10px] uppercase text-zinc-500">Sale time</p>
+              <p className="font-semibold text-zinc-100">
+                ~{deal.estimatedTimeToSaleDays}d
+              </p>
+            </div>
+            <div className="rounded-lg bg-zinc-950/70 p-2">
+              <p className="text-[10px] uppercase text-zinc-500">Stock</p>
+              <p className="font-semibold text-zinc-100">
+                {deal.stockConfidence}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!compact && (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-2.5">
+            <p className="text-[10px] font-semibold uppercase text-zinc-500">
+              Why this deal?
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-zinc-300">
+              {deal.qualityExplanation}
+            </p>
+          </div>
+        )}
 
         {!compact && (
           <div className="flex items-center justify-between text-xs">
@@ -134,7 +175,33 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
               </span>
             </span>
             <span className="text-zinc-500">
-              Score <span className="font-semibold text-zinc-300">{deal.score}</span>
+              Fresh{" "}
+              <span className="font-semibold text-zinc-300">
+                {deal.freshnessScore}
+              </span>
+            </span>
+          </div>
+        )}
+
+        {!compact && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-zinc-500">
+              Source{" "}
+              <span className="font-semibold text-zinc-300">
+                {deal.feedLabel ?? deal.source}
+              </span>
+            </span>
+            <span className="text-zinc-500">
+              Type{" "}
+              <span className="font-semibold text-zinc-300">
+                {deal.sourcingMode}
+              </span>
+            </span>
+            <span className="text-zinc-500">
+              Score{" "}
+              <span className="font-semibold text-zinc-300">
+                {deal.finalScore}
+              </span>
             </span>
           </div>
         )}
@@ -145,6 +212,8 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
             {` - ${qualityLabels[deal.sourceQuality]}`}
             {deal.estimatedFees > 0 &&
               ` - Fees ${formatMoney(deal.estimatedFees)}`}
+            {deal.estimatedShipping > 0 &&
+              ` - Ship ${formatMoney(deal.estimatedShipping)}`}
             {deal.retailPrice != null &&
               ` - Retail ${formatMoney(deal.retailPrice)}`}
           </p>

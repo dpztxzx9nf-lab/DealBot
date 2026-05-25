@@ -1,11 +1,10 @@
 import { ensureSourceId, getDealKey } from "./deal-keys";
-import { calcEstimatedFees } from "./money";
-import { sourceQualityFromComp } from "./scoring";
+import { enrichDeal, sourceQualityFromComp } from "./scoring";
 import type { Deal, DealStatus } from "./types";
 
 export const STORAGE_KEY = "dealbot:deals:v1";
 export const STORAGE_VERSION_KEY = "dealbot:storage:version";
-export const STORAGE_VERSION = "v3";
+export const STORAGE_VERSION = "v6";
 export const SEED_FLAG_KEY = "dealbot:seeded:v1";
 
 const STATUS_RANK: Record<DealStatus, number> = {
@@ -32,12 +31,13 @@ function normalizeDeal(d: Deal): Deal {
     ...d,
     source: d.source ?? "aggregated",
     compSource: d.compSource ?? "heuristic",
-    estimatedFees:
-      d.estimatedFees ?? calcEstimatedFees(d.estimatedResale ?? 0),
+    estimatedResale: d.estimatedResale ?? d.clearancePrice,
+    sellSpeed: d.sellSpeed ?? "MEDIUM",
+    confidence: d.confidence ?? "LOW",
     sourceQuality:
       d.sourceQuality ?? sourceQualityFromComp(d.compSource ?? "heuristic"),
   });
-  return withSource;
+  return enrichDeal(withSource);
 }
 
 function readRawDeals(): Deal[] {

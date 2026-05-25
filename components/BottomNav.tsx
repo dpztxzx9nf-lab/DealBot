@@ -5,15 +5,15 @@ import { usePathname } from "next/navigation";
 import { useDeals } from "@/hooks/useDeals";
 
 const tabs = [
-  { href: "/swipe", label: "Swipe", icon: "◈" },
-  { href: "/saved", label: "Saved", icon: "★" },
-  { href: "/discover", label: "Discover", icon: "◎" },
-  { href: "/sold", label: "Sold", icon: "✓" },
+  { href: "/discover", label: "Discover", icon: "D" },
+  { href: "/swipe", label: "Swipe", icon: "S" },
+  { href: "/pipeline", label: "Pipeline", icon: "P" },
+  { href: "/sold", label: "Sold", icon: "$" },
 ] as const;
 
 export function BottomNav() {
-  const pathname = usePathname();
-  const { savedDeals, pendingDeals } = useDeals();
+  const pathname = usePathname() ?? "/swipe";
+  const { pipelineDeals, pendingDeals } = useDeals();
   const isSwipe = pathname === "/swipe" || pathname === "/";
 
   return (
@@ -28,10 +28,11 @@ export function BottomNav() {
         {tabs.map((tab) => {
           const active =
             pathname === tab.href ||
-            (tab.href === "/swipe" && pathname === "/");
+            (tab.href === "/swipe" && pathname === "/") ||
+            (tab.href === "/pipeline" && pathname === "/saved");
           const badge =
-            tab.href === "/saved"
-              ? savedDeals.length
+            tab.href === "/pipeline"
+              ? pipelineDeals.length
               : tab.href === "/swipe"
                 ? pendingDeals.length
                 : 0;
@@ -48,7 +49,7 @@ export function BottomNav() {
                     : "text-zinc-500"
               }`}
             >
-              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="text-sm font-black leading-none">{tab.icon}</span>
               <span className="font-medium">{tab.label}</span>
               {badge > 0 && (
                 <span className="absolute right-[calc(50%-22px)] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-bold text-zinc-950">

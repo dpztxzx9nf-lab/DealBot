@@ -50,14 +50,82 @@ export function DealDetailsSheet({
             <dd>{formatMoney(deal.estimatedFees)}</dd>
           </div>
           <div className="flex justify-between">
+            <dt>Estimated shipping</dt>
+            <dd>{formatMoney(deal.estimatedShipping)}</dd>
+          </div>
+          <div className="flex justify-between">
             <dt>Net profit</dt>
             <dd className="text-emerald-400">
-              {formatMoney(deal.estimatedProfit)}
+              {formatMoney(deal.netProfit)}
             </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>ROI</dt>
+            <dd>{deal.roiPercent}%</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Recommended action</dt>
+            <dd>{deal.recommendation}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Acquisition type</dt>
+            <dd>
+              {deal.sourcingMode} / {deal.acquisitionMode}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Time to sale</dt>
+            <dd>~{deal.estimatedTimeToSaleDays} days</dd>
           </div>
           <div className="flex justify-between">
             <dt>Source quality</dt>
             <dd>{deal.sourceQuality}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Stock confidence</dt>
+            <dd>
+              {deal.stockConfidence} / {deal.inventoryStatus}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Freshness</dt>
+            <dd>{deal.freshnessScore}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Friction / competition</dt>
+            <dd>
+              {deal.acquisitionFrictionScore} / {deal.competitionScore}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Capital efficiency</dt>
+            <dd>{deal.capitalEfficiencyScore}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Source reliability</dt>
+            <dd>{deal.sourceReliabilityScore}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Acquisition effort</dt>
+            <dd>{deal.acquisitionDifficulty}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Demand / brand</dt>
+            <dd>
+              {deal.demandScore} / {deal.brandScore}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Margin / sell-through</dt>
+            <dd>
+              {deal.marginScore} / {deal.sellThroughScore}
+            </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Ship ease / risk</dt>
+            <dd>
+              {deal.shippingEaseScore} / {deal.riskScore}
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt>Comp</dt>
@@ -70,6 +138,27 @@ export function DealDetailsSheet({
             </div>
           )}
         </dl>
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+          <p className="text-[10px] font-semibold uppercase text-zinc-500">
+            Why this deal?
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-300">
+            {deal.qualityExplanation}
+          </p>
+        </div>
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+          <p className="text-[10px] font-semibold uppercase text-zinc-500">
+            Action
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-300">
+            {deal.recommendedActionReason}
+          </p>
+        </div>
+        {deal.rejectionReason && (
+          <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            {deal.rejectionReason}
+          </p>
+        )}
         {deal.notes && (
           <p className="mt-3 text-sm leading-relaxed text-zinc-500">
             {deal.notes}

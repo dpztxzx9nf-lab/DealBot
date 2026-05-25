@@ -20,7 +20,7 @@ import {
   loadLocation,
   saveLocation,
 } from "@/lib/location";
-import { enrichDeal } from "@/lib/scoring";
+import { enrichDeal, isSwipeEligibleDeal } from "@/lib/scoring";
 import { clearStorage, saveDeals } from "@/lib/storage";
 import type {
   Deal,
@@ -29,6 +29,7 @@ import type {
   FeedMeta,
   FeedResponse,
   LocationPrefs,
+  SourcingMode,
 } from "@/lib/types";
 import type { FeedDebugInfo } from "@/lib/feed-aggregator";
 
@@ -36,8 +37,25 @@ export interface FeedStatus {
   apiReachable: boolean | null;
   rawDealsFound: number;
   visibleCardsLoaded: number;
+  sourcesSearched: { name: string; count: number; error?: string }[];
+  sourceDiagnostics: FeedMeta["sources"];
+  activeSources: number;
+  inactiveSources: number;
+  failedSources: number;
+  acceptedProfitableLeads: number;
+  lastSuccessfulScanTime: string | null;
+  rejectedCount: number;
+  topRejectionReasons: { reason: string; count: number }[];
+  lastRefreshTime: string | null;
   lastError: string | null;
   lastFetchUrl: string | null;
+}
+
+export interface SearchExpansion {
+  lowerProfitMinimum: boolean;
+  lowerDiscountMinimum: boolean;
+  includeOnlineOnly: boolean;
+  includeWeakConfidence: boolean;
 }
 
 interface DealsContextValue {
@@ -50,6 +68,7 @@ interface DealsContextValue {
   deals: Deal[];
   pendingDeals: Deal[];
   savedDeals: Deal[];
+  pipelineDeals: Deal[];
   soldDeals: Deal[];
   skippedCount: number;
   statusCounts: {
@@ -61,7 +80,11 @@ interface DealsContextValue {
   feedLoading: boolean;
   feedError: string | null;
   feedStatus: FeedStatus;
+  searchExpansion: SearchExpansion;
+  sourceMode: SourcingMode;
   lastFeedMeta: FeedMeta | null;
+  setSearchExpansion: (patch: Partial<SearchExpansion>) => void;
+  setSourceMode: (mode: SourcingMode) => void;
   loadFeed: (override?: LocationPrefs) => Promise<void>;
   resetAppData: () => void;
   addDeal: (input: DealInput) => Deal;
@@ -72,8 +95,30 @@ interface DealsContextValue {
 
 const DealsContext = createContext<DealsContextValue | null>(null);
 
-const FEED_URL = (zip: string, radius: number) =>
-  `/api/deals/feed?zip=${encodeURIComponent(zip)}&radius=${radius}&debugRaw=1`;
+const DEFAULT_EXPANSION: SearchExpansion = {
+  lowerProfitMinimum: false,
+  lowerDiscountMinimum: false,
+  includeOnlineOnly: false,
+  includeWeakConfidence: false,
+};
+
+const FEED_URL = (
+  zip: string,
+  radius: number,
+  expansion: SearchExpansion,
+  mode: SourcingMode
+) => {
+  const params = new URLSearchParams({
+    zip,
+    radius: String(radius),
+    mode,
+    minProfit: expansion.lowerProfitMinimum ? "5" : "10",
+    minDiscount: expansion.lowerDiscountMinimum ? "10" : "25",
+  });
+  if (expansion.includeOnlineOnly) params.set("includeOnlineOnly", "1");
+  if (expansion.includeWeakConfidence) params.set("includeWeakConfidence", "1");
+  return `/api/deals/feed?${params.toString()}`;
+};
 
 function newId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -92,10 +137,23 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [lastFeedMeta, setLastFeedMeta] = useState<FeedMeta | null>(null);
+  const [searchExpansion, setSearchExpansionState] =
+    useState<SearchExpansion>(DEFAULT_EXPANSION);
+  const [sourceMode, setSourceModeState] = useState<SourcingMode>("hybrid");
   const [feedStatus, setFeedStatus] = useState<FeedStatus>({
     apiReachable: null,
     rawDealsFound: 0,
     visibleCardsLoaded: 0,
+    sourcesSearched: [],
+    sourceDiagnostics: [],
+    activeSources: 0,
+    inactiveSources: 0,
+    failedSources: 0,
+    acceptedProfitableLeads: 0,
+    lastSuccessfulScanTime: null,
+    rejectedCount: 0,
+    topRejectionReasons: [],
+    lastRefreshTime: null,
     lastError: null,
     lastFetchUrl: null,
   });
@@ -127,7 +185,7 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
 
   const loadFeed = useCallback(async (override?: LocationPrefs) => {
     const loc = override ?? location;
-    const url = FEED_URL(loc.zip, loc.radiusMiles);
+    const url = FEED_URL(loc.zip, loc.radiusMiles, searchExpansion, sourceMode);
 
     setFeedLoading(true);
     setFeedError(null);
@@ -157,6 +215,12 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
       const incoming = Array.isArray(data.deals) ? data.deals : [];
       const rawCount =
         data.debug?.totalRawCount ?? data.meta?.filtered ?? incoming.length;
+      const topRejectionReasons = Object.entries(
+        data.debug?.rejectedReasons ?? {}
+      )
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4);
 
       if (!res.ok) {
         throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -167,6 +231,21 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
         apiReachable: true,
         rawDealsFound: rawCount,
         visibleCardsLoaded: incoming.length,
+        sourcesSearched: data.debug?.sourcesSearched ?? data.meta?.sources ?? [],
+        sourceDiagnostics:
+          data.debug?.sourceDiagnostics ?? data.meta?.sources ?? [],
+        activeSources: data.debug?.activeSources ?? 0,
+        inactiveSources: data.debug?.inactiveSources ?? 0,
+        failedSources: data.debug?.failedSources ?? 0,
+        acceptedProfitableLeads:
+          data.debug?.acceptedProfitableLeads ?? incoming.length,
+        lastSuccessfulScanTime: data.debug?.lastSuccessfulScanTime ?? null,
+        rejectedCount: data.debug?.rejectedCount ?? 0,
+        topRejectionReasons,
+        lastRefreshTime:
+          data.debug?.lastRefreshTime ??
+          data.meta?.fetchedAt ??
+          new Date().toISOString(),
         lastError: data.errors?.length ? data.errors.join(" · ") : null,
         lastFetchUrl: url,
       });
@@ -202,13 +281,23 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
         apiReachable: false,
         rawDealsFound: 0,
         visibleCardsLoaded: 0,
+        sourcesSearched: [],
+        sourceDiagnostics: [],
+        activeSources: 0,
+        inactiveSources: 0,
+        failedSources: 0,
+        acceptedProfitableLeads: 0,
+        lastSuccessfulScanTime: null,
+        rejectedCount: 0,
+        topRejectionReasons: [],
+        lastRefreshTime: new Date().toISOString(),
         lastError: msg,
         lastFetchUrl: url,
       });
     } finally {
       setFeedLoading(false);
     }
-  }, [location]);
+  }, [location, searchExpansion, sourceMode]);
 
   useEffect(() => {
     if (!hydrated || bootFetched.current) return;
@@ -251,6 +340,14 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
     setLocationNote(`Deals near ${prefs.zip}`);
   }, []);
 
+  const setSearchExpansion = useCallback((patch: Partial<SearchExpansion>) => {
+    setSearchExpansionState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const setSourceMode = useCallback((mode: SourcingMode) => {
+    setSourceModeState(mode);
+  }, []);
+
   const resetAppData = useCallback(() => {
     clearStorage();
     clearLocation();
@@ -273,12 +370,15 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
         status: "pending",
       });
+      const nextDeal: Deal = isSwipeEligibleDeal(deal)
+        ? deal
+        : { ...deal, status: "skipped" };
       setDeals((prev) => {
-        const next = [...prev, deal];
+        const next = [...prev, nextDeal];
         saveDeals(next);
         return next;
       });
-      return deal;
+      return nextDeal;
     },
     []
   );
@@ -324,7 +424,13 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
     () =>
       deals
         .filter((d) => d.status === "pending")
-        .sort((a, b) => b.score - a.score),
+        .sort((a, b) => {
+          const profitDelta = b.netProfit - a.netProfit;
+          if (Math.abs(profitDelta) >= 15) return profitDelta;
+          const roiDelta = b.roiPercent - a.roiPercent;
+          if (Math.abs(roiDelta) >= 20) return roiDelta;
+          return b.score - a.score;
+        }),
     [deals]
   );
 
@@ -352,6 +458,7 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
         ),
     [deals]
   );
+  const pipelineDeals = savedDeals;
 
   const soldDeals = useMemo(
     () =>
@@ -392,13 +499,18 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
     deals,
     pendingDeals,
     savedDeals,
+    pipelineDeals,
     soldDeals,
     skippedCount,
     statusCounts,
     feedLoading,
     feedError,
     feedStatus,
+    searchExpansion,
+    sourceMode,
     lastFeedMeta,
+    setSearchExpansion,
+    setSourceMode,
     loadFeed,
     resetAppData,
     addDeal,

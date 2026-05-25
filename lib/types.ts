@@ -1,6 +1,6 @@
 export type SellSpeed = "FAST" | "MEDIUM" | "SLOW";
 export type Confidence = "LOW" | "MEDIUM" | "HIGH";
-export type Recommendation = "BUY" | "MAYBE" | "SKIP";
+export type Recommendation = "BUY" | "WATCH" | "SKIP";
 export type DealStatus = "pending" | "saved" | "skipped" | "bought" | "sold";
 export type CompSource =
   | "heuristic"
@@ -9,6 +9,9 @@ export type CompSource =
   | "ebay_sold"
   | "manual";
 export type SourceQuality = "strong" | "decent" | "risky";
+export type InventoryStatus = "verified" | "likely" | "unknown" | "stale" | "out_of_stock";
+export type AcquisitionMode = "local_pickup" | "online" | "marketplace" | "retail_clearance";
+export type SourcingMode = "nearby" | "online" | "hybrid";
 export type DealSource =
   | "facebook_marketplace"
   | "craigslist"
@@ -24,6 +27,8 @@ export type DealSource =
   | "garage_sales"
   | "costco_clearance"
   | "discord_deals"
+  | "amazon_price_drops"
+  | "liquidation_auctions"
   | "slickdeals"
   | "reddit"
   | "clearance"
@@ -56,11 +61,30 @@ export interface Deal {
   discountPercent?: number;
   estimatedResale: number;
   estimatedFees: number;
+  estimatedShipping: number;
+  grossProfit: number;
+  netProfit: number;
+  roiPercent: number;
   compSource: CompSource;
   sourceQuality: SourceQuality;
 
   sellSpeed: SellSpeed;
   confidence: Confidence;
+  sellThroughConfidence: Confidence;
+  estimatedTimeToSaleDays: number;
+  acquisitionDifficulty: number;
+  stockConfidence: number;
+  sourceReliabilityScore: number;
+  freshnessScore: number;
+  acquisitionFrictionScore: number;
+  competitionScore: number;
+  capitalEfficiencyScore: number;
+  inventoryStatus: InventoryStatus;
+  acquisitionMode: AcquisitionMode;
+  sourcingMode: SourcingMode;
+  pickupEligible?: boolean;
+  estimatedStockCount?: number;
+  lastVerifiedAt?: string;
   notes?: string;
   tags?: DealTags;
 
@@ -72,6 +96,16 @@ export interface Deal {
   roiMultiple: number;
   estimatedProfit: number;
   score: number;
+  demandScore: number;
+  brandScore: number;
+  marginScore: number;
+  sellThroughScore: number;
+  shippingEaseScore: number;
+  riskScore: number;
+  finalScore: number;
+  rejectionReason?: string;
+  qualityExplanation: string;
+  recommendedActionReason: string;
   recommendation: Recommendation;
 
   soldPrice?: number;
@@ -86,9 +120,35 @@ export type DealInput = Omit<
   | "roiMultiple"
   | "estimatedProfit"
   | "estimatedFees"
+  | "estimatedShipping"
+  | "grossProfit"
+  | "netProfit"
+  | "roiPercent"
   | "score"
+  | "demandScore"
+  | "brandScore"
+  | "marginScore"
+  | "sellThroughScore"
+  | "shippingEaseScore"
+  | "riskScore"
+  | "finalScore"
+  | "rejectionReason"
+  | "qualityExplanation"
+  | "recommendedActionReason"
   | "recommendation"
   | "sourceQuality"
+  | "sellThroughConfidence"
+  | "estimatedTimeToSaleDays"
+  | "acquisitionDifficulty"
+  | "stockConfidence"
+  | "sourceReliabilityScore"
+  | "freshnessScore"
+  | "acquisitionFrictionScore"
+  | "competitionScore"
+  | "capitalEfficiencyScore"
+  | "inventoryStatus"
+  | "acquisitionMode"
+  | "sourcingMode"
   | "strongCandidate"
   | "soldPrice"
   | "soldAt"
@@ -111,8 +171,16 @@ export interface RawFeedItem {
 export interface FeedMeta {
   zip: string;
   radiusMiles: number;
+  mode?: SourcingMode;
   fetchedAt: string;
-  sources: { name: string; count: number; error?: string }[];
+  sources: {
+    name: string;
+    count: number;
+    status?: string;
+    scope?: string;
+    scanned?: boolean;
+    error?: string;
+  }[];
   filtered: number;
   queued: number;
 }
