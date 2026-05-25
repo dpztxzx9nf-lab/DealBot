@@ -5,7 +5,14 @@ import { buildDealFromLead, buildDealsFromRawBypass } from "./feeds/ingest";
 import { filterFeedItemsWithStats, type FilteredLead } from "./feeds/filter";
 import { enrichDeal, isSwipeEligibleDeal } from "./scoring";
 import { SOURCE_CATALOG, sourceStatusLabel } from "./source-catalog";
-import type { Deal, FeedMeta, FeedResponse, RawFeedItem, SourcingMode } from "./types";
+import type {
+  Deal,
+  FeedMeta,
+  FeedResponse,
+  RawFeedItem,
+  RejectionBucket,
+  SourcingMode,
+} from "./types";
 
 export const DEBUG_RAW_FEED =
   process.env.DEALBOT_DEBUG_RAW_FEED === "1" ||
@@ -58,16 +65,6 @@ export interface FeedDebugInfo {
   lastRefreshTime: string;
   expanded: boolean;
 }
-
-type RejectionBucket =
-  | "low margin"
-  | "saturated"
-  | "risky shipping"
-  | "weak demand"
-  | "suspicious listing"
-  | "poor discount"
-  | "weak sell-through"
-  | "incomplete data";
 
 function bucketFromReason(reason: string): RejectionBucket {
   const lower = reason.toLowerCase();

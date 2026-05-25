@@ -9,6 +9,7 @@ export const SEED_FLAG_KEY = "dealbot:seeded:v1";
 
 const STATUS_RANK: Record<DealStatus, number> = {
   sold: 5,
+  listed: 5,
   bought: 4,
   saved: 3,
   skipped: 2,
