@@ -1,5 +1,7 @@
 export type SellSpeed = "FAST" | "MEDIUM" | "SLOW";
 export type Confidence = "LOW" | "MEDIUM" | "HIGH";
+export type FlipConfidenceLabel = "Strong Flip" | "Decent Opportunity" | "High Risk";
+export type DifficultyLabel = "Easy" | "Moderate" | "Hard";
 export type Recommendation = "BUY" | "WATCH" | "SKIP";
 export type DealStatus = "pending" | "saved" | "skipped" | "bought" | "sold";
 export type CompSource =
@@ -60,6 +62,8 @@ export interface Deal {
   retailPrice?: number;
   discountPercent?: number;
   estimatedResale: number;
+  resaleRangeLow: number;
+  resaleRangeHigh: number;
   estimatedFees: number;
   estimatedShipping: number;
   grossProfit: number;
@@ -70,9 +74,11 @@ export interface Deal {
 
   sellSpeed: SellSpeed;
   confidence: Confidence;
+  confidenceLabel: FlipConfidenceLabel;
   sellThroughConfidence: Confidence;
   estimatedTimeToSaleDays: number;
   acquisitionDifficulty: number;
+  difficultyLabel: DifficultyLabel;
   stockConfidence: number;
   sourceReliabilityScore: number;
   freshnessScore: number;
@@ -105,6 +111,7 @@ export interface Deal {
   finalScore: number;
   rejectionReason?: string;
   qualityExplanation: string;
+  dealExistenceReason: string;
   recommendedActionReason: string;
   recommendation: Recommendation;
 
@@ -119,6 +126,8 @@ export type DealInput = Omit<
   | "status"
   | "roiMultiple"
   | "estimatedProfit"
+  | "resaleRangeLow"
+  | "resaleRangeHigh"
   | "estimatedFees"
   | "estimatedShipping"
   | "grossProfit"
@@ -135,11 +144,14 @@ export type DealInput = Omit<
   | "rejectionReason"
   | "qualityExplanation"
   | "recommendedActionReason"
+  | "dealExistenceReason"
   | "recommendation"
+  | "confidenceLabel"
   | "sourceQuality"
   | "sellThroughConfidence"
   | "estimatedTimeToSaleDays"
   | "acquisitionDifficulty"
+  | "difficultyLabel"
   | "stockConfidence"
   | "sourceReliabilityScore"
   | "freshnessScore"
@@ -179,6 +191,11 @@ export interface FeedMeta {
     status?: string;
     scope?: string;
     scanned?: boolean;
+    latencyMs?: number;
+    health?: "ok" | "failed" | "inactive" | "not_scanned";
+    quality?: string;
+    accepted?: number;
+    profitableDensity?: number;
     error?: string;
   }[];
   filtered: number;

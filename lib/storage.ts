@@ -4,7 +4,7 @@ import type { Deal, DealStatus } from "./types";
 
 export const STORAGE_KEY = "dealbot:deals:v1";
 export const STORAGE_VERSION_KEY = "dealbot:storage:version";
-export const STORAGE_VERSION = "v6";
+export const STORAGE_VERSION = "v7";
 export const SEED_FLAG_KEY = "dealbot:seeded:v1";
 
 const STATUS_RANK: Record<DealStatus, number> = {

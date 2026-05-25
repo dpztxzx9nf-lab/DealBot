@@ -163,6 +163,35 @@ export function SwipeChrome() {
                 {feedStatus.activeSources} / {feedStatus.inactiveSources}
               </span>
             </div>
+            <div className="flex justify-between gap-2">
+              <span>Lead density</span>
+              <span className="text-zinc-200">
+                {feedStatus.rawDealsFound > 0
+                  ? `${Math.round((feedStatus.acceptedProfitableLeads / feedStatus.rawDealsFound) * 1000) / 10}%`
+                  : "0%"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-1 border-t border-zinc-800 pt-2 text-center">
+            <div className="rounded-lg bg-emerald-500/10 p-1.5">
+              <p className="text-[10px] text-emerald-500/80">Strong</p>
+              <p className="font-bold text-emerald-300">
+                {feedStatus.acceptedCounts.strongFlip}
+              </p>
+            </div>
+            <div className="rounded-lg bg-amber-500/10 p-1.5">
+              <p className="text-[10px] text-amber-500/80">Decent</p>
+              <p className="font-bold text-amber-300">
+                {feedStatus.acceptedCounts.decentOpportunity}
+              </p>
+            </div>
+            <div className="rounded-lg bg-red-500/10 p-1.5">
+              <p className="text-[10px] text-red-500/80">Risk</p>
+              <p className="font-bold text-red-300">
+                {feedStatus.acceptedCounts.highRisk}
+              </p>
+            </div>
           </div>
 
           <div className="mt-3 border-t border-zinc-800 pt-2">
@@ -187,7 +216,12 @@ export function SwipeChrome() {
                     <p className="mt-0.5 truncate text-[10px] text-zinc-600">
                       {source.status ?? "unknown"} /{" "}
                       {source.scanned ? "scanned" : "not scanned"}
+                      {` / ${source.health ?? "unknown"} / ${source.latencyMs ?? 0}ms`}
                       {source.error ? ` / ${source.error}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-zinc-700">
+                      accepted {source.accepted ?? 0}, density{" "}
+                      {source.profitableDensity ?? 0}%
                     </p>
                   </div>
                 ))}
@@ -196,6 +230,27 @@ export function SwipeChrome() {
               <p className="text-zinc-600">No search run yet.</p>
             )}
           </div>
+
+          {Object.keys(feedStatus.rejectionBuckets).length > 0 && (
+            <div className="mt-3 border-t border-zinc-800 pt-2">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+                Rejection buckets
+              </p>
+              <div className="grid grid-cols-2 gap-1">
+                {Object.entries(feedStatus.rejectionBuckets).map(
+                  ([bucket, count]) => (
+                    <div
+                      key={bucket}
+                      className="flex justify-between gap-2 rounded-lg bg-zinc-950/50 px-2 py-1"
+                    >
+                      <span className="truncate text-zinc-400">{bucket}</span>
+                      <span className="text-zinc-200">{count}</span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 border-t border-zinc-800 pt-2">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">

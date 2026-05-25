@@ -14,11 +14,14 @@ interface ImmersiveDealCardProps {
 function recommendationLabel(deal: Deal): string {
   if (deal.recommendation === "SKIP") return "Skip";
   if (deal.recommendation === "WATCH") return "Watch";
-  if (deal.sourceQuality === "strong" || deal.sellThroughScore >= 78) {
-    return "Buy";
-  }
   return "Buy";
 }
+
+const confidenceStyles: Record<Deal["confidenceLabel"], string> = {
+  "Strong Flip": "bg-emerald-400 text-zinc-950",
+  "Decent Opportunity": "bg-amber-400 text-zinc-950",
+  "High Risk": "bg-red-500 text-white",
+};
 
 export function ImmersiveDealCard({
   deal,
@@ -89,43 +92,56 @@ export function ImmersiveDealCard({
           <p className="mt-1 text-sm font-medium text-white/60">{deal.store}</p>
         )}
 
-        <div className="mt-4 flex items-end gap-4">
-          <div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-black ${confidenceStyles[deal.confidenceLabel]}`}
+          >
+            {deal.confidenceLabel}
+          </span>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85">
+            {deal.difficultyLabel} acquisition
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-white/10 p-2 backdrop-blur-sm">
             <p className="text-[10px] font-medium uppercase tracking-widest text-white/45">
               Buy
             </p>
-            <p className="text-xl font-bold tabular-nums text-white">
+            <p className="text-lg font-bold tabular-nums text-white">
               {formatMoney(deal.clearancePrice)}
             </p>
           </div>
-          <div className="pb-0.5 text-lg text-white/30">to</div>
-          <div>
+          <div className="rounded-xl bg-white/10 p-2 backdrop-blur-sm">
             <p className="text-[10px] font-medium uppercase tracking-widest text-white/45">
-              Sold comp
+              Resale
             </p>
-            <p className="text-xl font-bold tabular-nums text-emerald-300">
-              {formatMoney(deal.estimatedResale)}
+            <p className="text-sm font-bold tabular-nums text-emerald-300">
+              {formatMoney(deal.resaleRangeLow)}-{formatMoney(deal.resaleRangeHigh)}
             </p>
           </div>
-          <div className="ml-auto text-right">
+          <div className="rounded-xl bg-emerald-400/15 p-2 text-right backdrop-blur-sm">
             <p className="text-[10px] font-medium uppercase tracking-widest text-emerald-400/80">
               Net
             </p>
-            <p className="text-2xl font-black tabular-nums text-emerald-400">
+            <p className="text-xl font-black tabular-nums text-emerald-400">
               +{formatMoney(deal.netProfit)}
             </p>
           </div>
         </div>
 
         <p className="mt-3 text-xs font-medium text-white/50">
-          {deal.sellThroughConfidence} sell-through - {deal.inventoryStatus} stock -{" "}
+          {deal.confidence} confidence - {deal.sellThroughConfidence} sell-through -{" "}
           {deal.roiPercent}% ROI
           {deal.strongCandidate && (
             <span className="ml-2 text-cyan-300">Hot pick</span>
           )}
         </p>
-        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/65">
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/75">
           {deal.qualityExplanation}
+        </p>
+        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-white/45">
+          {deal.dealExistenceReason}
         </p>
       </div>
     </article>

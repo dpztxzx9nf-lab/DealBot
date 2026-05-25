@@ -45,6 +45,17 @@ export interface FeedStatus {
   acceptedProfitableLeads: number;
   lastSuccessfulScanTime: string | null;
   rejectedCount: number;
+  rejectionBuckets: Record<string, number>;
+  acceptedCounts: {
+    strongFlip: number;
+    decentOpportunity: number;
+    highRisk: number;
+  };
+  sourceContributionRates: Record<string, {
+    fetched: number;
+    accepted: number;
+    profitableDensity: number;
+  }>;
   topRejectionReasons: { reason: string; count: number }[];
   lastRefreshTime: string | null;
   lastError: string | null;
@@ -152,6 +163,13 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
     acceptedProfitableLeads: 0,
     lastSuccessfulScanTime: null,
     rejectedCount: 0,
+    rejectionBuckets: {},
+    acceptedCounts: {
+      strongFlip: 0,
+      decentOpportunity: 0,
+      highRisk: 0,
+    },
+    sourceContributionRates: {},
     topRejectionReasons: [],
     lastRefreshTime: null,
     lastError: null,
@@ -241,6 +259,13 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
           data.debug?.acceptedProfitableLeads ?? incoming.length,
         lastSuccessfulScanTime: data.debug?.lastSuccessfulScanTime ?? null,
         rejectedCount: data.debug?.rejectedCount ?? 0,
+        rejectionBuckets: data.debug?.rejectionBuckets ?? {},
+        acceptedCounts: data.debug?.acceptedCounts ?? {
+          strongFlip: 0,
+          decentOpportunity: 0,
+          highRisk: 0,
+        },
+        sourceContributionRates: data.debug?.sourceContributionRates ?? {},
         topRejectionReasons,
         lastRefreshTime:
           data.debug?.lastRefreshTime ??
@@ -289,6 +314,13 @@ export function DealsProvider({ children }: { children: React.ReactNode }) {
         acceptedProfitableLeads: 0,
         lastSuccessfulScanTime: null,
         rejectedCount: 0,
+        rejectionBuckets: {},
+        acceptedCounts: {
+          strongFlip: 0,
+          decentOpportunity: 0,
+          highRisk: 0,
+        },
+        sourceContributionRates: {},
         topRejectionReasons: [],
         lastRefreshTime: new Date().toISOString(),
         lastError: msg,

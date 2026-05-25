@@ -1,6 +1,8 @@
 import type {
   CompSource,
   Confidence,
+  DifficultyLabel,
+  FlipConfidenceLabel,
   AcquisitionMode,
   Deal,
   InventoryStatus,
@@ -28,11 +30,15 @@ const HEAVY_OR_OVERSIZED =
 const CONSUMABLE_OR_PERISHABLE =
   /\b(food|snack|candy|drink|beverage|coffee pods|supplement|vitamin|protein powder|medicine|diaper|soap|shampoo|lotion|detergent|cleaner|grocery|perishable)\b/i;
 const LOW_SELL_THROUGH =
-  /\b(cable|case|screen protector|generic|off brand|decor|wall art|costume|collectible lot|parts only|open package|refill|ink cartridge|toner)\b/i;
+  /\b(cable|case|screen protector|generic|off brand|decor|wall art|costume|collectible lot|parts only|open package|refill|ink cartridge|toner|phone case|charging cable|pop socket|sticker|poster)\b/i;
 const UNKNOWN_CONDITION =
   /\b(used|as-is|for parts|damaged|untested|unknown condition|missing|scratch|dent|refurb|renewed|open box)\b/i;
 const WEAK_TITLE =
   /\b(misc|assorted|bundle|lot|various|random|stuff|clearance item|sale item|deal|cheap)\b/i;
+const SUSPICIOUS_LISTING =
+  /\b(too good to be true|no receipt|cash only|wire|zelle only|ship only|no meetup|replica|clone|locked iphone|icloud locked|activation locked|stolen|serial removed|broken seal)\b/i;
+const SATURATED_ITEM =
+  /\b(funko|squishmallow|beanie baby|phone case|screen protector|dropship|temu|shein|fidget|generic led|hoverboard|fitness tracker)\b/i;
 const TRAP_RULES: Array<[RegExp, string]> = [
   [/\b(sign ?up|new account|account required|first time user|new customer)\b/i, "Requires signup"],
   [/\b(subscription|subscribe|auto-?renew|monthly plan|annual plan)\b/i, "Subscription required"],
@@ -120,6 +126,39 @@ function estimateTimeToSaleDays(sellSpeed: Deal["sellSpeed"], confidence: Confid
   return Math.max(2, base + (confidence === "LOW" ? 10 : confidence === "MEDIUM" ? 3 : 0));
 }
 
+function confidenceLabel(
+  finalScore: number,
+  riskScore: number,
+  sourceQuality: SourceQuality,
+  confidence: Confidence
+): FlipConfidenceLabel {
+  if (finalScore >= 72 && riskScore <= 32 && confidence === "HIGH") {
+    return "Strong Flip";
+  }
+  if (finalScore >= 52 && sourceQuality !== "risky" && confidence !== "LOW") {
+    return "Decent Opportunity";
+  }
+  return "High Risk";
+}
+
+function difficultyLabel(score: number): DifficultyLabel {
+  if (score <= 32) return "Easy";
+  if (score <= 62) return "Moderate";
+  return "Hard";
+}
+
+function resaleRange(resale: number, sourceQuality: SourceQuality): {
+  resaleRangeLow: number;
+  resaleRangeHigh: number;
+} {
+  const lowMultiplier = sourceQuality === "strong" ? 0.9 : sourceQuality === "decent" ? 0.82 : 0.7;
+  const highMultiplier = sourceQuality === "strong" ? 1.08 : sourceQuality === "decent" ? 1.15 : 1.25;
+  return {
+    resaleRangeLow: Math.round(resale * lowMultiplier),
+    resaleRangeHigh: Math.round(resale * highMultiplier),
+  };
+}
+
 function scoreFreshness(createdAt?: string): number {
   if (!createdAt) return 45;
   const created = new Date(createdAt).getTime();
@@ -143,6 +182,36 @@ function scoreCompetition(text: string, source: Deal["source"], tags: Deal["tags
       ? 18
       : 0;
   return clampScore(55 - publicDealPenalty - saturationPenalty + hiddenOpportunityBoost);
+}
+
+function buildDealExistenceReason(
+  deal: Pick<
+    Deal,
+    | "discountPercent"
+    | "compSource"
+    | "sourcingMode"
+    | "competitionScore"
+    | "freshnessScore"
+    | "sourceQuality"
+  >,
+  text: string
+): string {
+  if (deal.compSource === "ebay_sold") {
+    return "Sold comps suggest the market values this above the buy price.";
+  }
+  if ((deal.discountPercent ?? 0) >= 45) {
+    return "The listed discount creates enough spread to test against resale comps.";
+  }
+  if (deal.freshnessScore >= 75) {
+    return "Fresh listing signals can create a short window before other buyers react.";
+  }
+  if (deal.competitionScore >= 65 || /\b(open box|clearance|markdown|local pickup)\b/i.test(text)) {
+    return "This appears underexposed compared with common public deal feeds.";
+  }
+  if (deal.sourcingMode === "online") {
+    return "National pricing may leave a resale spread after fees and shipping.";
+  }
+  return "DealBot found a possible buy/resale spread, but it needs verification.";
 }
 
 export function findTrapRejectionReason(text: string): string | undefined {
@@ -227,12 +296,14 @@ export function calculateQualityScores(
     (HIGH_DEMAND.test(text) ? 70 : EASY_LOCAL_RESALE.test(text) ? 55 : 25) +
       (tags.localPickupFriendly ? 10 : 0) +
       (LOW_SELL_THROUGH.test(text) ? -35 : 0) +
+      (SATURATED_ITEM.test(text) ? -35 : 0) +
       (CONSUMABLE_OR_PERISHABLE.test(text) ? -45 : 0)
   );
 
   const brandScore = clampScore(
     (tags.strongBrand || RECOGNIZABLE_BRAND.test(text) ? 75 : 20) +
       (tags.oversaturated ? -30 : 0) +
+      (SATURATED_ITEM.test(text) ? -25 : 0) +
       (/\b(generic|unbranded|unknown brand|off brand)\b/i.test(text) ? -45 : 0)
   );
 
@@ -252,7 +323,8 @@ export function calculateQualityScores(
   const shippingEaseScore = clampScore(
     (tags.compact || EASY_LOCAL_RESALE.test(text) ? 78 : 48) +
       (tags.bulky || HEAVY_OR_OVERSIZED.test(text) ? -50 : 0) +
-      (tags.fragile ? -20 : 0)
+      (tags.fragile ? -20 : 0) +
+      (deal.estimatedShipping >= 25 ? -24 : deal.estimatedShipping >= 15 ? -10 : 0)
   );
 
   const riskScore = clampScore(
@@ -268,6 +340,8 @@ export function calculateQualityScores(
       (discount < 25 ? 18 : 0) +
       (UNKNOWN_CONDITION.test(text) ? 18 : 0) +
       (WEAK_TITLE.test(text) || deal.itemName.trim().length < 14 ? 16 : 0) +
+      (SUSPICIOUS_LISTING.test(text) ? 55 : 0) +
+      (SATURATED_ITEM.test(text) ? 24 : 0) +
       (tags.hardToPrice ? 16 : 0) +
       (tags.niche ? 12 : 0) +
       (CONSUMABLE_OR_PERISHABLE.test(text) ? 35 : 0) +
@@ -290,7 +364,13 @@ export function calculateQualityScores(
 
   let rejectionReason: string | undefined;
   if (trapReason) rejectionReason = `Rejected: ${trapReason}.`;
+  else if (SUSPICIOUS_LISTING.test(text))
+    rejectionReason = "Rejected: suspicious listing or unsafe transaction signal.";
+  else if (SATURATED_ITEM.test(text))
+    rejectionReason = "Rejected: saturated item with weak resale edge.";
   else if (profit < 10) rejectionReason = "Rejected: estimated profit is under $10.";
+  else if (profit < 20 && deal.estimatedShipping >= 15)
+    rejectionReason = "Rejected: shipping risk erases too much profit.";
   else if (profit < 15 && riskScore >= 35)
     rejectionReason = "Rejected: margin is too small for the risk.";
   else if (deal.confidence === "LOW" || deal.sourceQuality === "risky")
@@ -309,6 +389,8 @@ export function calculateQualityScores(
     rejectionReason = "Rejected: weak brand and low demand category.";
   else if (shippingEaseScore < 35)
     rejectionReason = "Rejected: too bulky or high-effort to flip easily.";
+  else if (sellThroughScore < 40)
+    rejectionReason = "Rejected: weak sell-through demand.";
   else if (CONSUMABLE_OR_PERISHABLE.test(text))
     rejectionReason = "Rejected: consumable or perishable item.";
   else if (discount < 25 && deal.sourceQuality !== "strong")
@@ -349,6 +431,8 @@ type EnrichableDeal = Omit<
   Deal,
   | "roiMultiple"
   | "estimatedProfit"
+  | "resaleRangeLow"
+  | "resaleRangeHigh"
   | "estimatedFees"
   | "estimatedShipping"
   | "grossProfit"
@@ -365,11 +449,14 @@ type EnrichableDeal = Omit<
   | "rejectionReason"
   | "qualityExplanation"
   | "recommendedActionReason"
+  | "dealExistenceReason"
   | "recommendation"
+  | "confidenceLabel"
   | "sourceQuality"
   | "sellThroughConfidence"
   | "estimatedTimeToSaleDays"
   | "acquisitionDifficulty"
+  | "difficultyLabel"
   | "stockConfidence"
   | "sourceReliabilityScore"
   | "freshnessScore"
@@ -406,13 +493,17 @@ export function enrichDeal<T extends EnrichableDeal>(
 ): T & {
   estimatedFees: number;
   estimatedShipping: number;
+  resaleRangeLow: number;
+  resaleRangeHigh: number;
   grossProfit: number;
   netProfit: number;
   roiPercent: number;
   sourceQuality: SourceQuality;
+  confidenceLabel: FlipConfidenceLabel;
   sellThroughConfidence: Confidence;
   estimatedTimeToSaleDays: number;
   acquisitionDifficulty: number;
+  difficultyLabel: DifficultyLabel;
   stockConfidence: number;
   sourceReliabilityScore: number;
   freshnessScore: number;
@@ -434,12 +525,17 @@ export function enrichDeal<T extends EnrichableDeal>(
   finalScore: number;
   rejectionReason?: string;
   qualityExplanation: string;
+  dealExistenceReason: string;
   recommendedActionReason: string;
   recommendation: Recommendation;
 } {
   const estimatedFees = deal.estimatedFees ?? calcEstimatedFees(deal.estimatedResale);
   const sourceQuality =
     deal.sourceQuality ?? sourceQualityFromComp(deal.compSource);
+  const { resaleRangeLow, resaleRangeHigh } = resaleRange(
+    deal.estimatedResale,
+    sourceQuality
+  );
   const acquisitionMode = deal.acquisitionMode ?? inferAcquisitionMode(deal.source);
   const sourcingMode = deal.sourcingMode ?? "hybrid";
   const estimatedShipping =
@@ -501,6 +597,7 @@ export function enrichDeal<T extends EnrichableDeal>(
         (acquisitionMode === "marketplace" ? 16 : 0) +
         (inventoryStatus === "unknown" ? 12 : inventoryStatus === "stale" ? 28 : 0)
     );
+  const labelDifficulty = difficultyLabel(acquisitionDifficulty);
   const freshnessScore = deal.freshnessScore ?? scoreFreshness(deal.createdAt);
   const acquisitionFrictionScore =
     deal.acquisitionFrictionScore ?? acquisitionDifficulty;
@@ -539,6 +636,22 @@ export function enrichDeal<T extends EnrichableDeal>(
   const recommendation = quality.rejectionReason
     ? "SKIP"
     : recommend(quality.finalScore);
+  const labelConfidence = confidenceLabel(
+    quality.finalScore,
+    quality.riskScore,
+    sourceQuality,
+    deal.confidence
+  );
+  const dealExistenceReason = buildDealExistenceReason(
+    {
+      ...deal,
+      sourceQuality,
+      sourcingMode,
+      competitionScore,
+      freshnessScore,
+    },
+    `${deal.itemName} ${deal.notes ?? ""}`
+  );
   const recommendedActionReason =
     recommendation === "BUY"
       ? `Buy if available: ${formatMoney(netProfit)} estimated net profit after fees and shipping.`
@@ -550,13 +663,17 @@ export function enrichDeal<T extends EnrichableDeal>(
     ...deal,
     estimatedFees,
     estimatedShipping,
+    resaleRangeLow,
+    resaleRangeHigh,
     grossProfit,
     netProfit,
     roiPercent,
     sourceQuality,
+    confidenceLabel: labelConfidence,
     sellThroughConfidence,
     estimatedTimeToSaleDays,
     acquisitionDifficulty,
+    difficultyLabel: labelDifficulty,
     stockConfidence,
     sourceReliabilityScore: sourceReliability,
     freshnessScore,
@@ -570,6 +687,7 @@ export function enrichDeal<T extends EnrichableDeal>(
     estimatedProfit,
     score: quality.finalScore,
     ...quality,
+    dealExistenceReason,
     recommendedActionReason,
     recommendation,
   };

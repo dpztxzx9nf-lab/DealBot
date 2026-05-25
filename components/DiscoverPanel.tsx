@@ -205,6 +205,26 @@ export function DiscoverPanel() {
             </p>
           </div>
         </div>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded-xl bg-emerald-500/10 p-2">
+            <p className="text-[10px] text-emerald-500/80">Strong</p>
+            <p className="font-bold text-emerald-300">
+              {feedStatus.acceptedCounts.strongFlip}
+            </p>
+          </div>
+          <div className="rounded-xl bg-amber-500/10 p-2">
+            <p className="text-[10px] text-amber-500/80">Decent</p>
+            <p className="font-bold text-amber-300">
+              {feedStatus.acceptedCounts.decentOpportunity}
+            </p>
+          </div>
+          <div className="rounded-xl bg-red-500/10 p-2">
+            <p className="text-[10px] text-red-500/80">High risk</p>
+            <p className="font-bold text-red-300">
+              {feedStatus.acceptedCounts.highRisk}
+            </p>
+          </div>
+        </div>
         <div className="mt-3 rounded-xl bg-zinc-950/50 p-3 text-xs text-zinc-500">
           <div className="flex justify-between gap-2">
             <span>Rejected</span>
@@ -235,6 +255,50 @@ export function DiscoverPanel() {
                 >
                   <span className="truncate">{item.reason}</span>
                   <span className="text-zinc-200">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {Object.keys(feedStatus.rejectionBuckets).length > 0 && (
+          <div className="mt-3 text-xs">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+              Rejection buckets
+            </p>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              {Object.entries(feedStatus.rejectionBuckets).map(([bucket, count]) => (
+                <div
+                  key={bucket}
+                  className="flex justify-between gap-2 rounded-lg bg-zinc-950/50 px-2 py-1 text-zinc-400"
+                >
+                  <span className="truncate">{bucket}</span>
+                  <span className="text-zinc-200">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {feedStatus.sourceDiagnostics.length > 0 && (
+          <div className="mt-3 text-xs">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+              Source health
+            </p>
+            <div className="mt-1 space-y-1">
+              {feedStatus.sourceDiagnostics.slice(0, 8).map((source) => (
+                <div
+                  key={source.name}
+                  className="rounded-lg bg-zinc-950/50 px-2 py-1 text-zinc-400"
+                >
+                  <div className="flex justify-between gap-3">
+                    <span className="truncate text-zinc-300">{source.name}</span>
+                    <span className="shrink-0">
+                      {source.health ?? "unknown"} / {source.latencyMs ?? 0}ms
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-zinc-600">
+                    fetched {source.count}, accepted {source.accepted ?? 0}, density{" "}
+                    {source.profitableDensity ?? 0}%
+                  </p>
                 </div>
               ))}
             </div>

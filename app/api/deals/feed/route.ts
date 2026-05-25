@@ -60,6 +60,9 @@ export async function GET(req: NextRequest) {
       rejectedCount: result.debug?.rejectedCount,
       acceptedCount: result.debug?.acceptedProfitableLeads,
       rejectionBuckets: result.debug?.rejectedReasons,
+      rejectionDistribution: result.debug?.rejectionBuckets,
+      acceptedCounts: result.debug?.acceptedCounts,
+      sourceContributionRates: result.debug?.sourceContributionRates,
       sourceFailures: result.debug?.sourceDiagnostics
         .filter(
           (source) => source.error && source.scanned && source.error !== "enrichment only"

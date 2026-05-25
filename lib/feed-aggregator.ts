@@ -36,7 +36,18 @@ export interface FeedDebugInfo {
   finalReturnedCount: number;
   rejectedCount: number;
   rejectedReasons: Record<string, number>;
+  rejectionBuckets: Record<RejectionBucket, number>;
   tierCounts: Record<string, number>;
+  acceptedCounts: {
+    strongFlip: number;
+    decentOpportunity: number;
+    highRisk: number;
+  };
+  sourceContributionRates: Record<string, {
+    fetched: number;
+    accepted: number;
+    profitableDensity: number;
+  }>;
   sourcesSearched: { name: string; count: number; error?: string }[];
   sourceDiagnostics: FeedMeta["sources"];
   activeSources: number;
@@ -46,6 +57,62 @@ export interface FeedDebugInfo {
   lastSuccessfulScanTime: string | null;
   lastRefreshTime: string;
   expanded: boolean;
+}
+
+type RejectionBucket =
+  | "low margin"
+  | "saturated"
+  | "risky shipping"
+  | "weak demand"
+  | "suspicious listing"
+  | "poor discount"
+  | "weak sell-through"
+  | "incomplete data";
+
+function bucketFromReason(reason: string): RejectionBucket {
+  const lower = reason.toLowerCase();
+  if (lower.includes("profit") || lower.includes("margin")) return "low margin";
+  if (lower.includes("saturat") || lower.includes("oversaturated")) return "saturated";
+  if (lower.includes("shipping") || lower.includes("bulky") || lower.includes("effort")) return "risky shipping";
+  if (lower.includes("demand") || lower.includes("brand") || lower.includes("category")) return "weak demand";
+  if (lower.includes("suspicious") || lower.includes("scam") || lower.includes("unsafe")) return "suspicious listing";
+  if (lower.includes("discount") || lower.includes("msrp")) return "poor discount";
+  if (lower.includes("sell-through") || lower.includes("slow")) return "weak sell-through";
+  return "incomplete data";
+}
+
+function mergeBucket(
+  buckets: Record<RejectionBucket, number>,
+  reason: string,
+  count = 1
+): void {
+  const bucket = bucketFromReason(reason);
+  buckets[bucket] = (buckets[bucket] ?? 0) + count;
+}
+
+function buildBuckets(reasons: Record<string, number>): Record<RejectionBucket, number> {
+  const buckets = {} as Record<RejectionBucket, number>;
+  for (const [reason, count] of Object.entries(reasons)) {
+    mergeBucket(buckets, reason, count);
+  }
+  return buckets;
+}
+
+type FeedFetchResult = {
+  items: RawFeedItem[];
+  error?: string;
+};
+
+async function timedFetch(
+  fn: () => Promise<FeedFetchResult>,
+  skippedError?: string
+): Promise<FeedFetchResult & { latencyMs: number }> {
+  const start = Date.now();
+  if (skippedError) {
+    return { items: [], error: skippedError, latencyMs: 0 };
+  }
+  const result = await fn();
+  return { ...result, latencyMs: Date.now() - start };
 }
 
 function shouldScanSource(mode: SourcingMode, scope: "local" | "online" | "nationwide" | "comps"): boolean {
@@ -70,6 +137,18 @@ function mergeRejectedReasons(
   for (const [reason, count] of Object.entries(next)) {
     target[reason] = (target[reason] ?? 0) + count;
   }
+}
+
+function sourceKeyForDeal(deal: Deal): string {
+  if (deal.source === "slickdeals") return "Slickdeals RSS";
+  if (deal.source === "reddit") return "Reddit communities";
+  return deal.feedLabel ?? deal.source;
+}
+
+function sourceHealth(source: FeedMeta["sources"][number]): NonNullable<FeedMeta["sources"][number]["health"]> {
+  if (!source.scanned) return source.status === "active connector" ? "not_scanned" : "inactive";
+  if (source.error && source.error !== "enrichment only") return "failed";
+  return "ok";
 }
 
 function dedupeDeals(deals: Deal[]): Deal[] {
@@ -184,21 +263,25 @@ export async function aggregateDeals(
   const scanReddit = shouldScanSource(mode, "nationwide");
 
   const [slick, reddit] = await Promise.all([
-    scanSlickdeals
-      ? fetchSlickdeals()
-      : Promise.resolve({ items: [], error: "not scanned in nearby mode" }),
-    scanReddit
-      ? fetchRedditDeals()
-      : Promise.resolve({ items: [], error: "not scanned in nearby mode" }),
+    timedFetch(
+      fetchSlickdeals,
+      scanSlickdeals ? undefined : "not scanned in nearby mode"
+    ),
+    timedFetch(
+      fetchRedditDeals,
+      scanReddit ? undefined : "not scanned in nearby mode"
+    ),
   ]);
 
-  const sourceResults: FeedMeta["sources"] = [
+  let sourceResults: FeedMeta["sources"] = [
     {
       name: "Slickdeals RSS",
       count: slick.items.length,
       status: "active connector",
       scope: "nationwide",
       scanned: scanSlickdeals,
+      latencyMs: slick.latencyMs,
+      quality: "decent",
       error: slick.error,
     },
     {
@@ -207,6 +290,8 @@ export async function aggregateDeals(
       status: "active connector",
       scope: "nationwide",
       scanned: scanReddit,
+      latencyMs: reddit.latencyMs,
+      quality: "decent",
       error: reddit.error,
     },
     {
@@ -215,6 +300,8 @@ export async function aggregateDeals(
       status: "active connector",
       scope: "comps",
       scanned: true,
+      latencyMs: 0,
+      quality: "strong",
       error: "enrichment only",
     },
     ...SOURCE_CATALOG.filter((source) => source.status !== "active_connector" && source.id !== "ebay_sold").map(
@@ -224,6 +311,9 @@ export async function aggregateDeals(
         status: sourceStatusLabel(source.status),
         scope: source.scope,
         scanned: false,
+        latencyMs: 0,
+        health: "inactive" as const,
+        quality: "inactive",
         error: sourceInactiveReason(source.status),
       })
     ),
@@ -245,6 +335,12 @@ export async function aggregateDeals(
   let deals: Deal[] = [];
   let afterFilterCount = 0;
   let tierCounts: Record<string, number> = { tier1: 0, tier2: 0, tier3: 0 };
+  let acceptedCounts = {
+    strongFlip: 0,
+    decentOpportunity: 0,
+    highRisk: 0,
+  };
+  let sourceContributionRates: FeedDebugInfo["sourceContributionRates"] = {};
 
   if (debugRaw) {
     deals = buildDealsFromRawBypass(raw, zip, { onlyEligible: false }).map((deal) =>
@@ -278,6 +374,20 @@ export async function aggregateDeals(
       candidates = candidates.map((deal) => enrichDeal(deal));
     }
 
+    for (const candidate of candidates) {
+      if (
+        !isSwipeEligibleDeal(candidate, {
+          minProfit,
+          includeWeakConfidence,
+        }) &&
+        candidate.rejectionReason
+      ) {
+        mergeRejectedReasons(rejectedReasons, {
+          [candidate.rejectionReason]: 1,
+        });
+      }
+    }
+
     const tiers = tierCandidates(candidates, { minProfit, includeWeakConfidence });
     tierCounts = {
       tier1: tiers.tier1.length,
@@ -291,10 +401,46 @@ export async function aggregateDeals(
     );
   }
 
+  acceptedCounts = {
+    strongFlip: deals.filter((deal) => deal.confidenceLabel === "Strong Flip").length,
+    decentOpportunity: deals.filter((deal) => deal.confidenceLabel === "Decent Opportunity").length,
+    highRisk: deals.filter((deal) => deal.confidenceLabel === "High Risk").length,
+  };
+
+  const acceptedBySource = deals.reduce<Record<string, number>>((acc, deal) => {
+    const key = sourceKeyForDeal(deal);
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  sourceResults = sourceResults.map((source) => {
+    const accepted = acceptedBySource[source.name] ?? 0;
+    const profitableDensity =
+      source.count > 0 ? Math.round((accepted / source.count) * 1000) / 10 : 0;
+    return {
+      ...source,
+      health: source.health ?? sourceHealth(source),
+      accepted,
+      profitableDensity,
+    };
+  });
+
+  sourceContributionRates = Object.fromEntries(
+    sourceResults.map((source) => [
+      source.name,
+      {
+        fetched: source.count,
+        accepted: source.accepted ?? 0,
+        profitableDensity: source.profitableDensity ?? 0,
+      },
+    ])
+  );
+
   const rejectedCount = Object.values(rejectedReasons).reduce(
     (sum, count) => sum + count,
     0
   );
+  const rejectionBuckets = buildBuckets(rejectedReasons);
   const activeSources = sourceResults.filter(
     (source) => source.status === "active connector"
   ).length;
@@ -326,6 +472,8 @@ export async function aggregateDeals(
     rejectedCount,
     acceptedCount: deals.length,
     rejectionBuckets: rejectedReasons,
+    rejectionDistribution: rejectionBuckets,
+    acceptedCounts,
     sourceFailures: sourceResults
       .filter(
         (source) => source.error && source.scanned && source.error !== "enrichment only"
@@ -338,7 +486,10 @@ export async function aggregateDeals(
     rejectedCount,
     acceptedProfitableLeads: deals.length,
     rejectedReasons,
+    rejectionBuckets,
     tierCounts,
+    acceptedCounts,
+    sourceContributionRates,
     expanded,
   });
 
@@ -366,7 +517,10 @@ export async function aggregateDeals(
     finalReturnedCount: deals.length,
     rejectedCount,
     rejectedReasons,
+    rejectionBuckets,
     tierCounts,
+    acceptedCounts,
+    sourceContributionRates,
     sourcesSearched: sourceResults,
     sourceDiagnostics: sourceResults,
     activeSources,

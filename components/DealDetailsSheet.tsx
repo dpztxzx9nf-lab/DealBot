@@ -39,11 +39,16 @@ export function DealDetailsSheet({
             <dd>{deal.score}</dd>
           </div>
           <div className="flex justify-between">
-            <dt>Buy / sold comp</dt>
+            <dt>Buy / resale range</dt>
             <dd>
               {formatMoney(deal.clearancePrice)} to{" "}
-              {formatMoney(deal.estimatedResale)}
+              {formatMoney(deal.resaleRangeLow)}-
+              {formatMoney(deal.resaleRangeHigh)}
             </dd>
+          </div>
+          <div className="flex justify-between">
+            <dt>Confidence label</dt>
+            <dd>{deal.confidenceLabel}</dd>
           </div>
           <div className="flex justify-between">
             <dt>Estimated fees</dt>
@@ -107,7 +112,9 @@ export function DealDetailsSheet({
           </div>
           <div className="flex justify-between">
             <dt>Acquisition effort</dt>
-            <dd>{deal.acquisitionDifficulty}</dd>
+            <dd>
+              {deal.difficultyLabel} / {deal.acquisitionDifficulty}
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt>Demand / brand</dt>
@@ -144,6 +151,14 @@ export function DealDetailsSheet({
           </p>
           <p className="mt-1 text-sm leading-relaxed text-zinc-300">
             {deal.qualityExplanation}
+          </p>
+        </div>
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+          <p className="text-[10px] font-semibold uppercase text-zinc-500">
+            Why this deal exists
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-zinc-300">
+            {deal.dealExistenceReason}
           </p>
         </div>
         <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">

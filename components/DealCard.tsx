@@ -30,6 +30,12 @@ const speedStyles: Record<Deal["sellSpeed"], string> = {
   SLOW: "text-red-400",
 };
 
+const confidenceStyles: Record<Deal["confidenceLabel"], string> = {
+  "Strong Flip": "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  "Decent Opportunity": "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  "High Risk": "bg-red-500/20 text-red-300 border-red-500/40",
+};
+
 function recommendationLabel(deal: Deal): string {
   if (deal.recommendation === "SKIP") return "Skip";
   if (deal.recommendation === "WATCH") return "Watch";
@@ -88,6 +94,11 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
               HOT
             </span>
           )}
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${confidenceStyles[deal.confidenceLabel]}`}
+          >
+            {deal.confidenceLabel}
+          </span>
         </div>
         <span className="absolute right-3 top-3 rounded-full bg-zinc-950/80 px-2 py-0.5 font-mono text-xs text-emerald-400">
           {formatRoi(deal.roiMultiple)}
@@ -115,9 +126,9 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
             </p>
           </div>
           <div className="rounded-lg bg-zinc-800/80 p-2">
-            <p className="text-[10px] uppercase text-zinc-500">Sold comp</p>
+            <p className="text-[10px] uppercase text-zinc-500">Resale range</p>
             <p className="font-semibold text-emerald-400">
-              {formatMoney(deal.estimatedResale)}
+              {formatMoney(deal.resaleRangeLow)}-{formatMoney(deal.resaleRangeHigh)}
             </p>
           </div>
           <div className="rounded-lg bg-zinc-800/80 p-2">
@@ -141,9 +152,9 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
               </p>
             </div>
             <div className="rounded-lg bg-zinc-950/70 p-2">
-              <p className="text-[10px] uppercase text-zinc-500">Stock</p>
+              <p className="text-[10px] uppercase text-zinc-500">Difficulty</p>
               <p className="font-semibold text-zinc-100">
-                {deal.stockConfidence}
+                {deal.difficultyLabel}
               </p>
             </div>
           </div>
@@ -156,6 +167,9 @@ export function DealCard({ deal, style, className = "", compact }: DealCardProps
             </p>
             <p className="mt-1 text-xs leading-relaxed text-zinc-300">
               {deal.qualityExplanation}
+            </p>
+            <p className="mt-2 border-t border-zinc-800 pt-2 text-xs leading-relaxed text-zinc-500">
+              {deal.dealExistenceReason}
             </p>
           </div>
         )}
