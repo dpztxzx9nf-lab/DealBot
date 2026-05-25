@@ -3,9 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "setup:https": "node scripts/setup-mkcert.mjs",
+    "verify:https": "node scripts/verify-https.mjs",
+    "dev:https": "node scripts/dev-https.mjs",
+    "dev:tunnel": "node scripts/dev-tunnel.mjs",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start-prod.mjs",
+    "deploy:persistent": "node scripts/deploy-persistent.mjs",
+    "persist:windows": "node scripts/install-windows-persistence.mjs",
+    "check:persistent": "node scripts/check-persistent.mjs",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:start:tunnel": "pm2 start ecosystem.tunnel.config.cjs",
+    "pm2:restart": "pm2 restart dealbot dealbot-tunnel",
+    "pm2:stop": "pm2 stop dealbot dealbot-tunnel",
+    "pm2:logs": "pm2 logs dealbot",
+    "pm2:logs:tunnel": "pm2 logs dealbot-tunnel",
+    "pm2:save": "pm2 save",
+    "tunnel:prod": "node scripts/tunnel-prod.mjs",
     "lint": "eslint"
   },
   "dependencies": {
@@ -18,8 +33,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "local-ssl-proxy": "^2.0.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

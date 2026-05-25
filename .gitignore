@@ -22,7 +22,16 @@
 
 # misc
 .DS_Store
-*.pem
+
+# mkcert dev certs (generated locally)
+/.certs/
+
+# Named Cloudflare Tunnel (local credentials + config)
+/cloudflared/config.yml
+/cloudflared/*.json
+
+# Windows service logs
+/logs/
 
 # debug
 npm-debug.log*

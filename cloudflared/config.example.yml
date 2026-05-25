@@ -1,0 +1,15 @@
+# Copy is optional — npm run deploy:persistent writes cloudflared/config.yml automatically.
+# Canonical values live in scripts/tunnel-constants.mjs
+#
+# DNS: dealbot.thinkcore.io must be authoritative in Cloudflare (full NS delegation).
+# Run: cloudflared tunnel route dns dealbot dealbot.thinkcore.io
+# Do NOT mirror *.cfargotunnel.com on dyna-ns.net unless Cloudflare is authoritative NS.
+# See README.md — "Public DNS (Cloudflare authority required)".
+
+tunnel: dealbot
+credentials-file: C:/Users/Golf/.cloudflared/2e983aee-75b4-4a55-8a76-ebce64535961.json
+
+ingress:
+  - hostname: dealbot.thinkcore.io
+    service: http://127.0.0.1:3002
+  - service: http_status:404
