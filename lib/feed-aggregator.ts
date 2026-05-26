@@ -120,6 +120,12 @@ function shouldScanSource(mode: SourcingMode, scope: "local" | "online" | "natio
 }
 
 function sourceInactiveReason(status: string): string {
+  if (status === "automated_feasible") return "automation feasible; connector not enabled";
+  if (status === "browser_assisted_restricted") return "browser-assisted only; restricted platform";
+  if (status === "planned_connector") return "planned official connector/importer";
+  if (status === "planned_signal_source") return "planned signal source";
+  if (status === "planned_source_registry") return "planned source registry";
+  if (status === "intelligence_layer") return "planned intelligence layer";
   if (status === "placeholder_planned") return "placeholder/planned source";
   if (status === "needs_credentials") return "needs credentials/API";
   if (status === "source_disabled") return "source disabled";

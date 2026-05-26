@@ -21,6 +21,7 @@ export type SourceLayerKind =
   | "local_marketplace"
   | "clearance"
   | "liquidation_auction"
+  | "pricing_intelligence"
   | "community"
   | "manual";
 export type MarketTruthKind =
@@ -52,6 +53,9 @@ export type DealSource =
   | "best_buy_open_box"
   | "estate_sales"
   | "garage_sales"
+  | "hidden_clearances"
+  | "local_liquidation"
+  | "regional_pricing_mismatches"
   | "costco_clearance"
   | "discord_deals"
   | "amazon_price_drops"

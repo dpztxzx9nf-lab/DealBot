@@ -113,11 +113,14 @@ function inferAcquisitionMode(source: Deal["source"]): AcquisitionMode {
     source === "lowes_clearance" ||
     source === "best_buy_open_box" ||
     source === "costco_clearance" ||
-    source === "clearance"
+    source === "clearance" ||
+    source === "hidden_clearances"
   ) {
     return "retail_clearance";
   }
-  if (source === "liquidation_auctions") return "marketplace";
+  if (source === "liquidation_auctions" || source === "local_liquidation") {
+    return "marketplace";
+  }
   return "online";
 }
 

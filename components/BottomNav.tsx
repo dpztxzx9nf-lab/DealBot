@@ -6,6 +6,7 @@ import { useDeals } from "@/hooks/useDeals";
 
 const tabs = [
   { href: "/discover", label: "Discover", icon: "D" },
+  { href: "/local-hunt", label: "Hunt", icon: "H" },
   { href: "/swipe", label: "Swipe", icon: "S" },
   { href: "/pipeline", label: "Pipeline", icon: "P" },
   { href: "/sold", label: "Sold", icon: "$" },
