@@ -19,11 +19,11 @@ function run(line) {
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
-console.log("DealBot — deploy:persistent\n");
+console.log("DealBot - deploy:persistent\n");
 
 fs.mkdirSync(path.join(ROOT, "cloudflared"), { recursive: true });
 fs.writeFileSync(configPath, tunnelConfigYaml() + "\n", "utf8");
-console.log(`✓ ${configPath}\n`);
+console.log(`[ok] ${configPath}\n`);
 
 for (const t of ["DealBot-App", "DealBot-Tunnel"]) {
   spawnSync("schtasks", ["/End", "/TN", t], { windowsHide: true });
@@ -39,7 +39,7 @@ run("pm2 save");
 run("pm2 status");
 
 console.log(`
-✓ Deployed
+[ok] Deployed
   Local:  http://127.0.0.1:3002
   Public: https://dealbot.thinkcore.io
 

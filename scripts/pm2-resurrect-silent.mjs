@@ -7,7 +7,7 @@ import { ROOT } from "./persistence-constants.mjs";
 
 export const PM2_RESURRECT_VBS = path.join(ROOT, "scripts", "pm2-resurrect-hidden.vbs");
 
-/** Task action runs pm2.cmd / .cmd / bare wscript without hidden resurrect → needs patch. */
+/** Task action runs pm2.cmd / .cmd / bare wscript without hidden resurrect; needs patch. */
 export function taskNeedsSilentPatch(taskName) {
   const r = spawnSync(
     "powershell.exe",

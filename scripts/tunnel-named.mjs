@@ -1,5 +1,5 @@
 /**
- * Named Cloudflare Tunnel → http://127.0.0.1:3002 (stable hostname).
+ * Named Cloudflare Tunnel to http://127.0.0.1:3002 (stable hostname).
  * Requires cloudflared/config.yml (copy from cloudflared/config.example.yml).
  */
 import { spawn } from "child_process";
@@ -29,7 +29,7 @@ const hostname = hostnameMatch?.[1] ?? "(see config.yml)";
 console.log(`[tunnel:named] Config: ${configPath}`);
 console.log(`[tunnel:named] Expecting DealBot PM2 on http://127.0.0.1:${port}`);
 console.log(`[tunnel:named] Public hostname: https://${hostname}`);
-console.log("[tunnel:named] Starting cloudflared tunnel run…\n");
+console.log("[tunnel:named] Starting cloudflared tunnel run...\n");
 
 const cloudflaredCmd =
   process.env.CLOUDFLARED_PATH ||

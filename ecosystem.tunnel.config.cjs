@@ -1,10 +1,10 @@
-/** PM2 — named Cloudflare tunnel → 127.0.0.1:3002 */
+/** PM2 - named Cloudflare tunnel to 127.0.0.1:3002 */
 module.exports = {
   apps: [
     {
       name: "dealbot-tunnel",
       script: "scripts/tunnel-named.mjs",
-      cwd: "C:/Projects/DealBot",
+      cwd: "C:/Projects/dealbot",
       interpreter: "node",
       windowsHide: true,
       autorestart: true,

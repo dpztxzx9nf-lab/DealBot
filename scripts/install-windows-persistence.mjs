@@ -1,10 +1,9 @@
 /**
- * Ensures Windows logon runs `pm2 resurrect` — uses your existing PM2 task if present.
+ * Ensures Windows logon runs `pm2 resurrect` - uses your existing PM2 task if present.
  * Does NOT create DealBot-App / DealBot-Tunnel tasks.
  */
 import { spawnSync } from "child_process";
 import fs from "fs";
-import path from "path";
 import {
   PM2_RESURRECT_TASK,
   ROOT,
@@ -74,7 +73,7 @@ function ensureSilentLogonTask(taskName) {
     console.error((r.stderr || r.stdout || "").trim());
     return false;
   }
-  console.log(`✓ Patched logon task for silent resurrect: ${taskName}`);
+  console.log(`[ok] Patched logon task for silent resurrect: ${taskName}`);
   console.log(`  wscript.exe //B ${PM2_RESURRECT_VBS}\n`);
   return true;
 }
@@ -84,13 +83,13 @@ if (process.platform !== "win32") {
   process.exit(0);
 }
 
-console.log("DealBot — persist:windows\n");
+console.log("DealBot - persist:windows\n");
 
 for (const t of OBSOLETE_TASKS) {
   spawnSync("schtasks", ["/Delete", "/TN", t, "/F"], { windowsHide: true });
 }
 
-console.log("▶ pm2 save\n");
+console.log("[run] pm2 save\n");
 const save = runPm2("pm2 save");
 if (save.status !== 0) {
   console.error("Run npm run deploy:persistent first.\n");
@@ -105,7 +104,7 @@ if (existingName) {
       windowsHide: true,
     });
   }
-  console.log(`✓ Using existing PM2 resurrect task: ${existingName}\n`);
+  console.log(`[ok] Using existing PM2 resurrect task: ${existingName}\n`);
   if (!ensureSilentLogonTask(existingName)) {
     console.error("Could not patch task for silent startup.\n");
     process.exit(1);
@@ -114,7 +113,7 @@ if (existingName) {
   process.exit(0);
 }
 
-console.log("No existing pm2 resurrect task found — creating one.\n");
+console.log("No existing pm2 resurrect task found - creating one.\n");
 
 if (!fs.existsSync(PM2_RESURRECT_VBS)) {
   console.error(`Missing ${PM2_RESURRECT_VBS}`);
@@ -126,6 +125,6 @@ if (!registerResurrectTask()) {
   process.exit(1);
 }
 
-console.log(`✓ Registered ${PM2_RESURRECT_TASK}`);
+console.log(`[ok] Registered ${PM2_RESURRECT_TASK}`);
 console.log(`  wscript.exe //B ${PM2_RESURRECT_VBS}\n`);
-console.log("After login/reboot: pm2 resurrect → dealbot + dealbot-tunnel\n");
+console.log("After login/reboot: pm2 resurrect restores dealbot + dealbot-tunnel\n");

@@ -21,11 +21,11 @@ import { isTaskActionSilent } from "./pm2-resurrect-silent.mjs";
 let failed = 0;
 
 function pass(label, detail = "") {
-  console.log(`  ✓ ${label}${detail ? ` — ${detail}` : ""}`);
+  console.log(`  [ok] ${label}${detail ? ` - ${detail}` : ""}`);
 }
 
 function fail(label, detail = "") {
-  console.log(`  ✗ ${label}${detail ? ` — ${detail}` : ""}`);
+  console.log(`  [fail] ${label}${detail ? ` - ${detail}` : ""}`);
   failed++;
 }
 
@@ -45,6 +45,16 @@ function dumpHasProcess(name) {
   } catch {
     return false;
   }
+}
+
+function comparableTunnelConfig(text) {
+  return text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() && !line.trimStart().startsWith("#"))
+    .join("\n")
+    .trim();
 }
 
 function pm2Online(name) {
@@ -70,18 +80,18 @@ async function httpOk(url) {
   return res.status >= 200 && res.status < 400;
 }
 
-console.log("\nDealBot — check:persistent\n");
+console.log("\nDealBot - check:persistent\n");
 
 const configPath = path.join(ROOT, "cloudflared", "config.yml");
-const expected = tunnelConfigYaml().replace(/\r\n/g, "\n").trim();
+const expected = comparableTunnelConfig(tunnelConfigYaml());
 
 if (!fs.existsSync(configPath)) {
   fail("cloudflared/config.yml", "npm run deploy:persistent");
-} else if (fs.readFileSync(configPath, "utf8").replace(/\r\n/g, "\n").trim() === expected) {
+} else if (comparableTunnelConfig(fs.readFileSync(configPath, "utf8")) === expected) {
   pass("cloudflared/config.yml");
   const cfg = fs.readFileSync(configPath, "utf8");
   if (cfg.includes("127.0.0.1:3002") || cfg.includes("localhost:3002")) {
-    pass("tunnel → 127.0.0.1:3002");
+    pass("tunnel to 127.0.0.1:3002");
   } else {
     fail("tunnel ingress", "must point to 127.0.0.1:3002");
   }
@@ -132,9 +142,9 @@ if (curl.status === 0 && /HTTP\/[\d.]+\s+(200|30[1278])/.test(out)) {
 } else {
   fail(
     "public URL",
-    "thinkcore.io NS must be Cloudflare; run: cloudflared tunnel route dns dealbot dealbot.thinkcore.io — do not use dyna-ns CNAME → *.cfargotunnel.com (see README)"
+    "thinkcore.io NS must be Cloudflare; run: cloudflared tunnel route dns dealbot dealbot.thinkcore.io - do not use dyna-ns CNAME to *.cfargotunnel.com (see README)"
   );
 }
 
-console.log(failed === 0 ? "\n✓ All checks passed.\n" : `\n✗ ${failed} failed.\n`);
+console.log(failed === 0 ? "\n[ok] All checks passed.\n" : `\n[fail] ${failed} failed.\n`);
 process.exit(failed === 0 ? 0 : 1);

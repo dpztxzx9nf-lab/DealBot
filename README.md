@@ -2,6 +2,29 @@
 
 Personal resale flip intelligence — mobile-first swipe deck for public deal feeds.
 
+## Operational summary
+
+DealBot has two supported runtime modes:
+
+| Mode | Command | Port | Notes |
+| --- | --- | --- | --- |
+| Development | `npm run dev` | `0.0.0.0:3000` | Local Next.js development |
+| Production | `npm start` | `0.0.0.0:3002` | Uses `scripts/start-prod.mjs` |
+| Persistent production | `npm run deploy:persistent` | `0.0.0.0:3002` | Builds, starts PM2 app+tunnel, then saves PM2 |
+
+PM2 names:
+
+- App: `dealbot`
+- Tunnel: `dealbot-tunnel`
+
+Persistence flow:
+
+1. `npm run deploy:persistent`
+2. `npm run persist:windows`
+3. `npm run check:persistent`
+
+The named Cloudflare tunnel routes `dealbot.thinkcore.io` to `http://127.0.0.1:3002`. See `docs/OPERATIONS.md` for the audit checklist, PM2 layout, Windows reboot persistence, and handoff commands.
+
 ## Quick start (desktop)
 
 ```bash
@@ -159,7 +182,7 @@ curl -I https://192.168.1.9:3443/swipe
 Uses your existing **PM2 resurrect** logon flow — not separate per-app Scheduled Tasks.
 
 ```powershell
-cd C:\Projects\DealBot
+cd C:\Projects\dealbot
 npm install
 npm run deploy:persistent
 npm run persist:windows

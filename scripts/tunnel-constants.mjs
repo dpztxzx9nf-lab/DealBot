@@ -11,7 +11,7 @@ export const DEALBOT_TUNNEL = {
 
 export function tunnelConfigYaml() {
   const t = DEALBOT_TUNNEL;
-  return `# Named Cloudflare Tunnel — DealBot (gitignored; auto-managed)
+  return `# Named Cloudflare Tunnel - DealBot (gitignored; auto-managed)
 # Tunnel ID: ${t.id}
 
 tunnel: ${t.name}
