@@ -5,7 +5,7 @@ module.exports = {
       name: "dealbot",
       script: "node_modules/next/dist/bin/next",
       args: ["start", "-H", "0.0.0.0", "-p", "3002"],
-      cwd: "C:/Projects/dealbot",
+      cwd: "C:/Projects/DealBot",
       interpreter: "node",
       windowsHide: true,
       autorestart: true,

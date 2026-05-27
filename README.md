@@ -182,7 +182,7 @@ curl -I https://192.168.1.9:3443/swipe
 Uses your existing **PM2 resurrect** logon flow — not separate per-app Scheduled Tasks.
 
 ```powershell
-cd C:\Projects\dealbot
+cd C:\Projects\DealBot
 npm install
 npm run deploy:persistent
 npm run persist:windows

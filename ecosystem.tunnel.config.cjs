@@ -4,7 +4,7 @@ module.exports = {
     {
       name: "dealbot-tunnel",
       script: "scripts/tunnel-named.mjs",
-      cwd: "C:/Projects/dealbot",
+      cwd: "C:/Projects/DealBot",
       interpreter: "node",
       windowsHide: true,
       autorestart: true,

@@ -1,6 +1,6 @@
 # DealBot Operations
 
-This document is the operational handoff for `C:\Projects\dealbot`.
+This document is the operational handoff for `C:\Projects\DealBot`.
 
 ## Inventory
 
@@ -51,13 +51,13 @@ Do not change ports casually. Confirm that no other active project owns the targ
 - name: `dealbot`
 - script: `node_modules/next/dist/bin/next`
 - args: `start -H 0.0.0.0 -p 3002`
-- cwd: `C:/Projects/dealbot`
+- cwd: `C:/Projects/DealBot`
 
 `ecosystem.tunnel.config.cjs` starts:
 
 - name: `dealbot-tunnel`
 - script: `scripts/tunnel-named.mjs`
-- cwd: `C:/Projects/dealbot`
+- cwd: `C:/Projects/DealBot`
 
 Both processes should be present in `pm2 status` and in the saved PM2 dump after `pm2 save`.
 
@@ -66,7 +66,7 @@ Both processes should be present in `pm2 status` and in the saved PM2 dump after
 DealBot uses a named Cloudflare tunnel. The tunnel config is generated at:
 
 ```text
-C:\Projects\dealbot\cloudflared\config.yml
+C:\Projects\DealBot\cloudflared\config.yml
 ```
 
 The generated config should route:
@@ -105,7 +105,7 @@ Persistence should use PM2 resurrect. Do not create separate persistent app and 
 Run from a normal user PowerShell session:
 
 ```powershell
-cd C:\Projects\dealbot
+cd C:\Projects\DealBot
 git status --short --branch
 pm2 -v
 pm2 status
